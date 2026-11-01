@@ -1,0 +1,6 @@
+{
+  "name": "Namma Ooru Workers",
+  "description": "Tamil Nadu's local worker discovery and connection platform connecting trusted service providers with customers.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
