@@ -26,8 +26,7 @@ import googleAuthRoutes from './server/routes/googleAuth';
 import adminRecoveryRoutes from './server/routes/adminRecovery';
 import notificationRoutes from './server/routes/notifications';
 import { createSeoHandlers } from './server/routes/seo';
-import { compression } from './server/middleware/compress';
-
+import compression from 'compression';
 const isProd = process.env.NODE_ENV === 'production';
 
 async function startServer() {
