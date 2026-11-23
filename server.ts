@@ -67,7 +67,8 @@ async function startServer() {
             directives: {
               defaultSrc: ["'self'"],
               scriptSrc: ["'self'"],
-              styleSrc: ["'self'", "'unsafe-inline'"], // Tailwind's generated styles are inlined at build time
+              styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+              fontSrc: ["'self'", 'data:', 'https://fonts.gstatic.com'],
               imgSrc: ["'self'", 'data:', 'https:'], // worker profile photos are hotlinked https URLs
               connectSrc: ["'self'"],
               objectSrc: ["'none'"],
