@@ -22,6 +22,7 @@ import { TN_DISTRICTS } from '../data/tamilNaduData';
 import { fetchGoogleEnabled } from '../api/googleAuth';
 import { localizePlace, localizeTaluk, localizeDistrict } from '../i18n/locationNames';
 import { useLocationNames } from '../i18n/useLocationNames';
+import { ConfirmDialog } from './ConfirmDialog';
 
 interface NavbarProps {
   selectedDistrict: string;
@@ -56,6 +57,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const [isLocationMenuOpen, setIsLocationMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [confirmLogout, setConfirmLogout] = useState(false);
 
   const currentDistrictObj = TN_DISTRICTS.find((d) => d.id === selectedDistrict);
   const currentDistrictLabel = currentDistrictObj
@@ -356,8 +358,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <div className="pt-1 border-t border-[#176B4D]/10">
                       <button
                         onClick={() => {
-                          logout();
+                          // Ask first; the existing logout() runs only after the person confirms.
                           setIsUserMenuOpen(false);
+                          setConfirmLogout(true);
                         }}
                         className="w-full text-left px-3 py-2 text-xs font-semibold text-[#D64545] hover:bg-red-50 rounded-xl flex items-center gap-2 transition"
                       >
@@ -372,6 +375,18 @@ export const Navbar: React.FC<NavbarProps> = ({
           )}
         </div>
       </div>
+    {confirmLogout && (
+        <ConfirmDialog
+          message={t('logout_confirm_message')}
+          confirmLabel={t('nav_logout')}
+          cancelLabel={t('action_cancel')}
+          onCancel={() => setConfirmLogout(false)}
+          onConfirm={() => {
+            setConfirmLogout(false);
+            logout();
+          }}
+        />
+      )}
     </header>
   );
 };

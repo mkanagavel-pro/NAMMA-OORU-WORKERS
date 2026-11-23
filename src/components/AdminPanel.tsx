@@ -24,6 +24,7 @@ import {
 import { Modal } from './Modal';
 import { AdminRecoveryTab } from './AdminRecoveryTab';
 import { useLanguage } from '../i18n/LanguageContext';
+import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
 import { Worker, Appeal, AuditLog } from '../types';
 import { WORKER_CATEGORIES, TN_DISTRICTS } from '../data/tamilNaduData';
@@ -119,17 +120,9 @@ export const AdminPanel: React.FC = () => {
   const [resolutionNote, setResolutionNote] = useState('');
 
   // Feedback
-  const [toastMessage, setToastMessage] = useState('');
-  const [toastError, setToastError] = useState('');
-
-  const showSuccess = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(''), 3500);
-  };
-  const showError = (msg: string) => {
-    setToastError(msg);
-    setTimeout(() => setToastError(''), 3500);
-  };
+  const toast = useToast();
+  const showSuccess = (msg: string) => toast.success(msg);
+  const showError = (msg: string) => toast.error(msg);
 
   const fetchAdminData = async () => {
     if (!token) return;
@@ -514,18 +507,6 @@ export const AdminPanel: React.FC = () => {
           </button>
         </div>
       </div>
-
-      {/* Toast Notifications */}
-      {toastMessage && (
-        <div className="mb-5 p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs font-bold text-emerald-900 shadow-xs animate-in fade-in">
-          ✓ {toastMessage}
-        </div>
-      )}
-      {toastError && (
-        <div className="mb-5 p-3.5 rounded-2xl bg-red-50 border border-red-200 text-xs font-bold text-[#D64545] shadow-xs animate-in fade-in">
-          ✕ {toastError}
-        </div>
-      )}
 
       {/* Tab Navigation */}
       <div className="flex border-b border-stone-200 mb-6 gap-2 sm:gap-6 overflow-x-auto pb-1">

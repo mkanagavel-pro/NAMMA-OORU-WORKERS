@@ -132,6 +132,7 @@ export const translations = {
     nav_register_worker: 'Join as Worker',
     nav_register_customer: 'Customer Sign Up',
     nav_logout: 'Logout',
+    logout_confirm_message: 'Are you sure you want to logout?',
     nav_notifications: 'Notifications',
     nav_system_emails: 'System Emails',
 
@@ -547,6 +548,7 @@ export const translations = {
     nav_register_worker: 'பணியாளராக இணையுங்கள்',
     nav_register_customer: 'வாடிக்கையாளர் பதிவு',
     nav_logout: 'வெளியேறு',
+    logout_confirm_message: 'நிச்சயமாக வெளியேற விரும்புகிறீர்களா?',
     nav_notifications: 'அறிவிப்புகள்',
     nav_system_emails: 'மின்னஞ்சல் பெட்டி',
 

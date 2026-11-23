@@ -22,6 +22,8 @@ import {
 import { Worker, Suspension, Appeal, AppNotification } from '../types';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
+import { ConfirmDialog } from './ConfirmDialog';
 import { WORKER_CATEGORIES, TN_DISTRICTS } from '../data/tamilNaduData';
 import { localizePlace, localizeTaluk, localizeDistrict } from '../i18n/locationNames';
 import { useLocationNames } from '../i18n/useLocationNames';
@@ -66,8 +68,16 @@ export const WorkerDashboard: React.FC = () => {
   const [isSubmittingAppeal, setIsSubmittingAppeal] = useState(false);
 
   // Status feedback
-  const [statusMessage, setStatusMessage] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
+  // Success / error messages go to the shared viewport-fixed toast, so they are visible wherever the page is scrolled.
+  // (Passing '' used to clear the old inline banner; it now simply does nothing.)
+  const toast = useToast();
+  const [confirmLogout, setConfirmLogout] = useState(false);
+  const setStatusMessage = (m: string) => {
+    if (m) toast.success(m);
+  };
+  const setErrorMessage = (m: string) => {
+    if (m) toast.error(m);
+  };
 
   // Security Modals state
   const [showChangePass, setShowChangePass] = useState(false);
@@ -140,7 +150,6 @@ export const WorkerDashboard: React.FC = () => {
       if (res.ok) {
         setWorker((prev) => (prev ? { ...prev, availability: newStatus } : null));
         setStatusMessage(`Status updated to ${newStatus}`);
-        setTimeout(() => setStatusMessage(''), 2500);
       }
     } catch {
       setErrorMessage('Failed to update availability');
@@ -194,7 +203,6 @@ export const WorkerDashboard: React.FC = () => {
         setWorker(data.worker);
         updateWorkerProfileState(data.worker);
         setStatusMessage('Profile updated successfully!');
-        setTimeout(() => setStatusMessage(''), 3000);
       } else {
         setErrorMessage(data.error || 'Failed to update profile');
       }
@@ -496,18 +504,6 @@ export const WorkerDashboard: React.FC = () => {
           {t('worker_security_tab')}
         </button>
       </div>
-
-      {/* Messages */}
-      {statusMessage && (
-        <div className="mb-5 p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs font-semibold text-emerald-800">
-          {statusMessage}
-        </div>
-      )}
-      {errorMessage && (
-        <div className="mb-5 p-3 rounded-2xl bg-red-50 border border-red-200 text-xs font-semibold text-[#D64545]">
-          {errorMessage}
-        </div>
-      )}
 
       {/* TAB 1: Profile Editor (Req 20: No admin approval required) */}
       {activeTab === 'profile' && (
@@ -1002,13 +998,26 @@ export const WorkerDashboard: React.FC = () => {
           <div className="pt-2 flex justify-between items-center">
             <span className="text-xs text-stone-500">End your current session:</span>
             <button
-              onClick={logout}
+              onClick={() => setConfirmLogout(true)}
               className="px-4 py-2 rounded-xl border border-[#D64545] text-[#D64545] hover:bg-red-50 text-xs font-bold transition"
             >
               Sign Out of Worker Account
             </button>
           </div>
         </div>
+      )}
+
+      {confirmLogout && (
+        <ConfirmDialog
+          message={t('logout_confirm_message')}
+          confirmLabel={t('nav_logout')}
+          cancelLabel={t('action_cancel')}
+          onCancel={() => setConfirmLogout(false)}
+          onConfirm={() => {
+            setConfirmLogout(false);
+            logout();
+          }}
+        />
       )}
     </div>
   );

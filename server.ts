@@ -25,6 +25,8 @@ import recoveryRoutes from './server/routes/recovery';
 import googleAuthRoutes from './server/routes/googleAuth';
 import adminRecoveryRoutes from './server/routes/adminRecovery';
 import notificationRoutes from './server/routes/notifications';
+import { createSeoHandlers } from './server/routes/seo';
+import { compression } from './server/middleware/compress';
 
 const isProd = process.env.NODE_ENV === 'production';
 
@@ -93,6 +95,7 @@ async function startServer() {
 
   // Body size limits. Profile photos are stored as hotlinked URLs, not
   // base64 blobs, so there's no legitimate need for a large JSON body here.
+  if (isProd) app.use(compression());
   app.use(express.json({ limit: '256kb' }));
   app.use(express.urlencoded({ extended: true, limit: '256kb' }));
 
@@ -142,6 +145,17 @@ async function startServer() {
   app.use('/api/admin', adminRoutes);
   app.use('/api/notifications', notificationRoutes);
 
+  // Unknown API paths are real 404s (JSON), never the HTML app shell.
+  app.use('/api', (_req, res) => {
+    res.status(404).json({ error: 'Not found' });
+  });
+
+  // SEO: robots.txt, sitemap.xml (+ optional Search Console verification file) are generated from live data and
+  // mounted before static files so they always win over any stale file in /public.
+  const distPath = path.join(process.cwd(), 'dist');
+  const seo = createSeoHandlers(isProd ? distPath : null);
+  app.use(seo.files);
+
   // Vite middleware for development vs static for production
   if (!isProd) {
     const vite = await createViteServer({
@@ -150,11 +164,18 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
-    });
+    // Hashed build assets are immutable; everything else revalidates. index.html is served by the SEO handler
+    // (per-route title/meta/canonical), so static must not answer "/" itself.
+    app.use(
+      express.static(distPath, {
+        index: false,
+        setHeaders(res, filePath) {
+          if (filePath.includes(`${path.sep}assets${path.sep}`)) res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+          else res.setHeader('Cache-Control', 'public, max-age=86400');
+        },
+      })
+    );
+    app.use(seo.pages); // home, landing pages, 301 redirects, real 404s
   }
 
   // Centralized error handler - must be registered last. Never leaks stack

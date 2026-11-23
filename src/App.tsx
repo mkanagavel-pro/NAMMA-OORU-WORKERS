@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import {
   Search,
   SlidersHorizontal,
@@ -18,6 +18,7 @@ import {
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { LanguageProvider, useLanguage } from './i18n/LanguageContext';
 import { NotificationProvider, useNotifications } from './context/NotificationContext';
+import { ToastProvider, useToast } from './context/ToastContext';
 import { Navbar } from './components/Navbar';
 import { MobileNav } from './components/MobileNav';
 import { WorkerCard } from './components/WorkerCard';
@@ -25,23 +26,39 @@ import { WorkerProfileModal } from './components/WorkerProfileModal';
 import { RatingModal } from './components/RatingModal';
 import { ReportModal } from './components/ReportModal';
 import { AuthModal } from './components/AuthModal';
-import { WorkerDashboard } from './components/WorkerDashboard';
-import { AdminPanel } from './components/AdminPanel';
-import { ResetPasswordPage } from './components/ResetPasswordPage';
-import { AdminLoginPage } from './components/AdminLoginPage';
+const WorkerDashboard = lazy(() => import('./components/WorkerDashboard').then((m) => ({ default: m.WorkerDashboard })));
+const AdminPanel = lazy(() => import('./components/AdminPanel').then((m) => ({ default: m.AdminPanel })));
+const ResetPasswordPage = lazy(() => import('./components/ResetPasswordPage').then((m) => ({ default: m.ResetPasswordPage })));
+const AdminLoginPage = lazy(() => import('./components/AdminLoginPage').then((m) => ({ default: m.AdminLoginPage })));
 import { consumeGoogleFragment } from './api/googleAuth';
 import { SplashScreen, SPLASH_SHOW_DELAY_MS } from './components/SplashScreen';
 import { FavouritesView } from './components/FavouritesView';
 import { ContactedView } from './components/ContactedView';
 import { NotificationDrawer } from './components/NotificationDrawer';
-import { TN_DISTRICTS, getQuickCategories, getMoreCategories } from './data/tamilNaduData';
+import { TN_DISTRICTS, getQuickCategories, getMoreCategories, isValidCategoryId } from './data/tamilNaduData';
 import { CategoryPicker } from './components/CategoryPicker';
 import { Worker } from './types';
 import { localizePlace, localizeTaluk, localizeDistrict } from './i18n/locationNames';
 import { useLocationNames } from './i18n/useLocationNames';
 
 // The admin dashboard lives at /admin. /admin/login is a separate standalone page (see App()).
+// SEO landing pages (/workers/<category>[/<district>]) open the normal search UI with those filters preset.
+function presetFromPath(): { category: string; district: string } {
+  const m = window.location.pathname.toLowerCase().match(/^\/workers\/([a-z0-9_]+)(?:\/([a-z0-9_]+))?\/?$/);
+  if (!m || !isValidCategoryId(m[1])) return { category: 'all', district: 'all' };
+  const district = m[2] && TN_DISTRICTS.some((d) => d.id === m[2]) ? m[2] : 'all';
+  return { category: m[1], district };
+}
+
 const isAdminPath = () => /^\/admin(\/|$)/.test(window.location.pathname);
+
+function LazyFallback() {
+  return (
+    <div className="py-24 text-center" role="status" aria-label="Loading">
+      <div className="w-10 h-10 border-4 border-[#176B4D] border-t-transparent rounded-full animate-spin mx-auto" />
+    </div>
+  );
+}
 
 function MainApp() {
   const { language, t } = useLanguage();
@@ -58,8 +75,13 @@ function MainApp() {
   const [searchQuery, setSearchQuery] = useState('');
   // The server query is debounced so typing never fires a request (or an AI call) per keystroke.
   const [debouncedQuery, setDebouncedQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [selectedDistrict, setSelectedDistrict] = useState('all');
+  const [preset] = useState(presetFromPath);
+  const [selectedCategory, setSelectedCategory] = useState(preset.category);
+  const [selectedDistrict, setSelectedDistrict] = useState(preset.district);
+  useEffect(() => {
+    if (!/^\/workers\//i.test(window.location.pathname)) return;
+    if (selectedCategory !== preset.category || selectedDistrict !== preset.district) window.history.replaceState(null, '', '/');
+  }, [selectedCategory, selectedDistrict, preset]);
   const [availableOnly, setAvailableOnly] = useState(false);
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [sortBy, setSortBy] = useState<'proximity' | 'rating' | 'default'>('default');
@@ -95,7 +117,11 @@ function MainApp() {
   const [authModalTab, setAuthModalTab] = useState<'login' | 'signup' | undefined>(undefined);
 
   // Contact notification prompt
-  const [contactFeedback, setContactFeedback] = useState<string | null>(null);
+  // Contact / rating / link confirmations use the shared, viewport-fixed toast (visible at any scroll position).
+  const toast = useToast();
+  const setContactFeedback = (message: string | null) => {
+    if (message) toast.success(message);
+  };
 
   // Fetch Workers from API. All filtering/sorting/pagination is done by the
   // server (GET /api/workers); this only builds the query string.
@@ -312,7 +338,6 @@ function MainApp() {
       const data = await res.json();
       if (res.ok && data.actionUrl) {
         setContactFeedback(`Connecting call to ${worker.name}...`);
-        setTimeout(() => setContactFeedback(null), 3000);
         refreshNotifications();
         window.location.href = data.actionUrl;
       }
@@ -338,7 +363,6 @@ function MainApp() {
       const data = await res.json();
       if (res.ok && data.actionUrl) {
         setContactFeedback(`Opening WhatsApp for ${worker.name}...`);
-        setTimeout(() => setContactFeedback(null), 3000);
         refreshNotifications();
         window.open(data.actionUrl, '_blank');
       }
@@ -356,7 +380,6 @@ function MainApp() {
       setSelectedWorker((prev) => (prev ? { ...prev, ratingSummary: newSummary } : null));
     }
     setContactFeedback('Your rating was submitted anonymously!');
-    setTimeout(() => setContactFeedback(null), 3000);
   };
 
   // Single district-change handler shared by the desktop navbar chip and the
@@ -409,7 +432,6 @@ function MainApp() {
     } else if (frag.kind === 'linked') {
       refreshUserData();
       setContactFeedback(t('google_linked_ok'));
-      setTimeout(() => setContactFeedback(null), 4000);
     } else {
       exchangeGoogleTicket(frag.ticket).then((r) => {
         if (!r.success) showError(r.code);
@@ -474,15 +496,8 @@ function MainApp() {
         activeTab={activeTab}
       />
 
-      {/* Contact Trigger Feedback Banner */}
-      {contactFeedback && (
-        <div className="bg-[#176B4D] text-white text-xs py-2 px-4 text-center font-bold shadow-sm animate-in fade-in">
-          {contactFeedback}
-        </div>
-      )}
-
       {/* VIEW: WORKER DASHBOARD */}
-      {activeTab === 'worker-dash' && <WorkerDashboard />}
+      {activeTab === 'worker-dash' && <Suspense fallback={<LazyFallback />}><WorkerDashboard /></Suspense>}
 
       {/* VIEW: ADMIN PANEL */}
       {activeTab === 'admin-panel' &&
@@ -491,7 +506,7 @@ function MainApp() {
             <div className="w-10 h-10 border-4 border-[#176B4D] border-t-transparent rounded-full animate-spin mx-auto" />
           </div>
         ) : user?.role === 'admin' ? (
-          <AdminPanel />
+          <Suspense fallback={<LazyFallback />}><AdminPanel /></Suspense>
         ) : null)}
 
       {/* VIEW: FAVOURITES */}
@@ -966,11 +981,12 @@ export default function App() {
   const isAdminLoginPage = cleanPath === '/admin/login';
   return (
     <LanguageProvider>
+      <ToastProvider>
       {isResetPage ? (
-        <ResetPasswordPage />
+        <Suspense fallback={<LazyFallback />}><ResetPasswordPage /></Suspense>
       ) : isAdminLoginPage ? (
         <AuthProvider>
-          <AdminLoginPage />
+          <Suspense fallback={<LazyFallback />}><AdminLoginPage /></Suspense>
         </AuthProvider>
       ) : (
         <AuthProvider>
@@ -979,6 +995,7 @@ export default function App() {
           </NotificationProvider>
         </AuthProvider>
       )}
+      </ToastProvider>
     </LanguageProvider>
   );
 }

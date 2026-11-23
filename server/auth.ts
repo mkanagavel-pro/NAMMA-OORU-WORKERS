@@ -6,13 +6,19 @@ import { UserModel } from './models/User';
 // start rather than sign/verify tokens with a guessable, publicly-known
 // default. Generate a real secret with:
 //   node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
-const JWT_SECRET = process.env.JWT_SECRET;
-if (!JWT_SECRET || JWT_SECRET.length < 32) {
-  throw new Error(
-    'JWT_SECRET environment variable is missing or too short (must be at least 32 characters). ' +
-    'Refusing to start the server with an insecure signing key. Set JWT_SECRET in your .env file.'
-  );
+// Validation runs once at import time and returns a `string` (never undefined), so the narrowing is
+// preserved inside the functions below without any cast or non-null assertion.
+function loadJwtSecret(): string {
+  const secret = process.env.JWT_SECRET;
+  if (!secret || secret.length < 32) {
+    throw new Error(
+      'JWT_SECRET environment variable is missing or too short (must be at least 32 characters). ' +
+      'Refusing to start the server with an insecure signing key. Set JWT_SECRET in your .env file.'
+    );
+  }
+  return secret;
 }
+const JWT_SECRET: string = loadJwtSecret();
 
 export interface TokenPayload {
   userId: string;

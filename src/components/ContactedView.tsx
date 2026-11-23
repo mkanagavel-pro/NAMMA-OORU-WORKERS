@@ -105,6 +105,8 @@ export const ContactedView: React.FC<ContactedViewProps> = ({
                       alt={item.workerName}
                       className="w-full h-full object-cover"
                       referrerPolicy="no-referrer"
+              loading="lazy"
+              decoding="async"
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center font-bold text-[#176B4D]">

@@ -7,7 +7,7 @@ import { WorkerModel } from '../models/Worker';
 import { LOCATION_CONFIGURED_DISTRICTS } from '../../src/data/salemLocations';
 import { validateWorkerLocation, sanitizeServiceAreas, cleanAreaText, type WorkerLocation } from '../services/workerLocation';
 import {
-  parseSearchQuery, searchWorkers, toMongoFilter, buildFilter, dbSortSpec,
+  parseSearchQuery, searchWorkers, type SearchParams, toMongoFilter, buildFilter, dbSortSpec,
   getEnabledDistricts, describeEnabledDistricts, type SearchRepo,
 } from '../services/workerSearch';
 import { isValidCategoryId } from '../../src/data/tamilNaduData';
@@ -110,9 +110,9 @@ router.get('/search-config', async (_req: Request, res: Response) => {
     const extra: Record<string, string[]> = {};
     const extraByTaluk: Record<string, string[]> = {};
     for (const d of enabled) {
-      const base = {
-        districts: [d], outOfScope: false, category: null, area: null, text: null, availableOnly: false,
-        verifiedOnly: false, sort: 'default' as const, customer: null, radiusKm: null, page: 1, limit: 1, taluk: null,
+      const base: SearchParams = {
+        districts: [d], outOfScope: false, category: null, area: null, text: null, aiCategories: [], aiKeywords: [], availableOnly: false,
+        verifiedOnly: false, sort: 'default', customer: null, radiusKm: null, page: 1, limit: 1, taluk: null,
       };
       const isStr = (a: unknown): a is string => typeof a === 'string';
       extra[d.id] = (await WorkerModel.distinct('publicArea', toMongoFilter(buildFilter(base)))).filter(isStr);

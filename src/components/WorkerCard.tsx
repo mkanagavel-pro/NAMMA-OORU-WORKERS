@@ -145,6 +145,8 @@ export const WorkerCard: React.FC<WorkerCardProps> = ({
               alt={worker.name}
               className="w-full h-full object-cover"
               referrerPolicy="no-referrer"
+              loading="lazy"
+              decoding="async"
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-[#176B4D]/10 text-[#176B4D] font-black text-xl">

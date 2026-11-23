@@ -233,6 +233,8 @@ router.get('/callback', googleCallbackLimiter, async (req: Request, res: Respons
     // ---- link (signed-in user) ----
     if (rec.intent === 'link') {
       const current = await UserModel.findOne({ id: rec.linkUserId });
+      // The signed-in account must still exist; same outcome decideGoogleLink gives for a missing account.
+      if (!current) return appError(res, 'state');
       const owner = await UserModel.findOne({ googleId: sub });
       const d = decideGoogleLink(sub, view(current), view(owner));
       if (d.action !== 'link') return appError(res, d.action === 'error' ? d.code : 'server');

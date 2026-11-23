@@ -131,7 +131,8 @@ router.post('/customer/register', registerLimiter, async (req: Request, res: Res
       return res.status(400).json({ error: pwCheck.error });
     }
 
-    const existing = await UserModel.findOne({ email: email.toLowerCase() });
+    const normalizedEmail = String(email).toLowerCase();
+    const existing = await UserModel.findOne({ email: normalizedEmail });
     if (existing) {
       return res.status(400).json({ error: 'Account with this email already exists' });
     }
@@ -139,7 +140,7 @@ router.post('/customer/register', registerLimiter, async (req: Request, res: Res
     const now = new Date().toISOString();
     const newUser = await UserModel.create({
       id: crypto.randomUUID(),
-      email: email.toLowerCase(),
+      email: normalizedEmail,
       passwordHash: hashPassword(password),
       role: 'customer',
       authProviders: ['local'],
@@ -151,7 +152,7 @@ router.post('/customer/register', registerLimiter, async (req: Request, res: Res
       updatedAt: now,
     });
 
-    const otpResult = await saveAndSendOtp(newUser.email, 'verify_email');
+    const otpResult = await saveAndSendOtp(normalizedEmail, 'verify_email');
 
     // SECURITY FIX: no session token is issued here. An unverified account
     // must not receive a normal authenticated session through registration
@@ -190,7 +191,7 @@ router.post('/customer/login', loginLimiter, async (req: Request, res: Response)
 
     const user = await UserModel.findOne({ email: email.toLowerCase(), role: 'customer' });
 
-    if (!user || !verifyPassword(password, user.passwordHash)) {
+    if (!user || !user.email || !verifyPassword(password, user.passwordHash)) {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
@@ -565,7 +566,7 @@ router.post('/admin/login', adminLoginLimiter, async (req: Request, res: Respons
 
     const user = await UserModel.findOne({ email: email.trim().toLowerCase(), role: 'admin' });
 
-    if (!user || !verifyPassword(password, user.passwordHash)) {
+    if (!user || !user.email || !verifyPassword(password, user.passwordHash)) {
       return res.status(401).json({ error: 'Invalid administrator credentials' });
     }
     // A restricted administrator gets the same generic failure (and could not use the token anyway:
@@ -612,7 +613,7 @@ router.post('/verify-email', otpLimiter, async (req: Request, res: Response) => 
     }
 
     const user = await UserModel.findOne({ email: email.toLowerCase() });
-    if (!user) {
+    if (!user || !user.email) {
       return res.status(404).json({ error: 'Account not found' });
     }
 
@@ -712,7 +713,7 @@ router.post('/forgot-password', otpLimiter, async (req: Request, res: Response) 
     }
 
     const user = await UserModel.findOne({ email: email.toLowerCase() });
-    if (!user) {
+    if (!user || !user.email) {
       // Generic response to avoid email enumeration.
       return res.json({ success: true, message: 'If an account exists, a reset code was sent.' });
     }
@@ -723,7 +724,7 @@ router.post('/forgot-password', otpLimiter, async (req: Request, res: Response) 
       return res.json({ success: true, message: 'If an account exists, a reset code was sent.' });
     }
 
-    await saveAndSendOtp(user.email!, 'reset_password');
+    await saveAndSendOtp(user.email, 'reset_password');
     res.json({ success: true, message: 'Password reset code sent to your email.' });
   } catch (err) {
     console.error('forgot-password error:', err);
@@ -749,7 +750,7 @@ router.post('/reset-password', otpLimiter, async (req: Request, res: Response) =
     }
 
     const user = await UserModel.findOne({ email: email.toLowerCase() });
-    if (!user) {
+    if (!user || !user.email) {
       return res.status(404).json({ error: 'User not found' });
     }
 
@@ -760,7 +761,7 @@ router.post('/reset-password', otpLimiter, async (req: Request, res: Response) =
     await user.save();
 
     await bumpTokenVersion(user.id);
-    await addAuditLog(user.email!, 'password_reset_otp', 'user', user.id);
+    await addAuditLog(user.email, 'password_reset_otp', 'user', user.id);
 
     res.json({ success: true, message: 'Password has been reset successfully. You can now log in.' });
   } catch (err) {
@@ -861,13 +862,14 @@ router.post('/worker/change-email', requireAuth, async (req: AuthRequest, res: R
 
     const oldEmail = user.email || null;
     const now = new Date().toISOString();
-    user.email = newEmail.toLowerCase();
+    const updatedEmail = newEmail.toLowerCase();
+    user.email = updatedEmail;
     user.emailVerified = true;
     user.updatedAt = now;
     await user.save();
 
     if (worker) {
-      worker.email = newEmail.toLowerCase();
+      worker.email = updatedEmail;
       worker.updatedAt = now;
       await worker.save();
     }
@@ -877,7 +879,7 @@ router.post('/worker/change-email', requireAuth, async (req: AuthRequest, res: R
 
     const token = generateToken({
       userId: user.id,
-      email: user.email,
+      email: updatedEmail,
       role: 'worker',
       workerId: user.workerId || undefined,
       tokenVersion: user.tokenVersion,
@@ -886,7 +888,7 @@ router.post('/worker/change-email', requireAuth, async (req: AuthRequest, res: R
     res.json({
       success: true,
       token,
-      email: user.email,
+      email: updatedEmail,
       message: 'Email address updated successfully! Future notifications will be sent to this address.',
     });
   } catch (err) {
@@ -909,7 +911,8 @@ router.post('/delete-account', requireAuth, async (req: AuthRequest, res: Respon
     let authenticated = false;
     if (password && verifyPassword(password, user.passwordHash)) {
       authenticated = true;
-    } else if (otp) {
+    } else if (otp && user.email) {
+      // OTP confirmation needs an email address; accounts without one must use their password.
       const result = await verifyAndConsumeOtp(user.email, 'delete_account', otp);
       authenticated = result.ok;
     }
@@ -931,7 +934,7 @@ router.post('/delete-account', requireAuth, async (req: AuthRequest, res: Respon
     }
 
     await UserModel.deleteOne({ id: user.id });
-    await addAuditLog(user.email, 'account_deleted_permanently', user.role, user.id);
+    await addAuditLog(user.email || user.loginId || user.id, 'account_deleted_permanently', user.role, user.id);
 
     res.json({ success: true, message: 'Account permanently deleted.' });
   } catch (err) {
