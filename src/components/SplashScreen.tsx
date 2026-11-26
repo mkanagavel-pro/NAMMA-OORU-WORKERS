@@ -48,7 +48,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ status, leaving = fa
         <p className="now-splash-title">
           Namma Ooru <span>Workers</span>
         </p>
-        <p className="now-splash-subtitle">நம் ஊரு ஒர்க்கர்ஸ்</p>
+        <p className="now-splash-subtitle">Trusted Local Workers in Tamil Nadu</p>
 
         {isError ? (
           <div className="now-splash-status">

@@ -1,25 +1,213 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!--seo:head-start-->
-    <title>Namma Ooru Workers | Find Trusted Local Workers in Tamil Nadu</title>
-    <meta name="description" content="Find trusted local workers in Tamil Nadu: electricians, plumbers, masons, painters, carpenters, drivers, cooks and more. நம்பகமான உள்ளூர் பணியாளர்களைக் கண்டறியுங்கள்." />
-    <meta name="robots" content="index,follow" />
-    <!--seo:head-end-->
-    <link rel="icon" type="image/svg+xml" href="/logo.svg" />
-    <link rel="apple-touch-icon" href="/logo-official.png" />
-    <meta name="theme-color" content="#176B4D" />
-    <link rel="preload" as="image" href="/logo-official.png" />
-        <!-- Google Fonts for Tamil and English -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Anek+Tamil:wght@400;500;600;700;800&family=Noto+Sans+Tamil:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  </head>
-  <body class="bg-[#FAF7EF] text-[#26332D] antialiased selection:bg-[#E8B83D]/30 selection:text-[#176B4D]">
-    <div id="root"><!--seo:body--></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
-</html>
 
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!--seo:head-start-->
+  <title>Namma Ooru Workers | Find Trusted Local Workers in Tamil Nadu</title>
+  <meta name="description"
+    content="Find trusted local workers in Tamil Nadu: electricians, plumbers, masons, painters, carpenters, drivers, cooks and more." />
+  <meta name="robots" content="index,follow" />
+  <!--seo:head-end-->
+
+  <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+  <link rel="apple-touch-icon" href="/logo-official.png" />
+  <meta name="theme-color" content="#176B4D" />
+  <link rel="preload" as="image" href="/logo-official.png" />
+
+  <!-- Immediate first-frame splash: matches React SplashScreen -->
+  <style>
+    #initial-splash {
+      position: fixed;
+      inset: 0;
+      z-index: 99999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+      background: #fbf8f4;
+      color: #26332d;
+    }
+
+    #initial-splash {
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    }
+
+    #initial-splash-inner {
+      width: 100%;
+      max-width: 360px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      opacity: 0;
+      animation: nowSplashIn 600ms cubic-bezier(0.2, 0.7, 0.2, 1) 350ms forwards;
+    }
+
+    #initial-splash-logo-wrap {
+      position: relative;
+      width: clamp(112px, 32vmin, 168px);
+      aspect-ratio: 300 / 299;
+      margin-bottom: 20px;
+    }
+
+    #initial-splash-logo {
+      position: relative;
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      border-radius: 22%;
+    }
+
+    #initial-splash-glow {
+      position: absolute;
+      inset: 0;
+      border-radius: 24%;
+      box-shadow:
+        0 0 0 0 rgba(23, 107, 77, 0.28),
+        0 0 28px 6px rgba(232, 184, 61, 0.28);
+      animation: nowSplashPulse 2.2s ease-in-out 950ms infinite;
+    }
+
+    #initial-splash-title {
+      margin: 0;
+      font-size: clamp(1.5rem, 6vw, 1.9rem);
+      line-height: 1.15;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      color: #176b4d;
+    }
+
+    #initial-splash-title span {
+      color: #e8b83d;
+    }
+
+    #initial-splash-subtitle {
+      margin: 4px 0 0;
+      font-size: 0.875rem;
+      color: #586b63;
+      font-weight: 500;
+    }
+
+    #initial-splash-status {
+      margin-top: 22px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      min-height: 56px;
+    }
+
+    #initial-splash-spinner {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: 3px solid rgba(23, 107, 77, 0.18);
+      border-top-color: #176b4d;
+      animation: nowSplashSpin 800ms linear infinite;
+    }
+
+    #initial-splash-text {
+      margin: 0;
+      font-size: 0.8125rem;
+      color: #586b63;
+      max-width: 28ch;
+    }
+
+    @keyframes nowSplashIn {
+      from {
+        opacity: 0;
+        transform: scale(0.92);
+      }
+
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    @keyframes nowSplashPulse {
+
+      0%,
+      100% {
+        box-shadow: 0 0 0 0 rgba(23, 107, 77, 0.28),
+          0 0 24px 4px rgba(232, 184, 61, 0.22);
+      }
+
+      50% {
+        box-shadow: 0 0 0 14px rgba(23, 107, 77, 0),
+          0 0 36px 10px rgba(232, 184, 61, 0.38);
+      }
+    }
+
+    @keyframes nowSplashSpin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      #initial-splash-inner {
+        animation: nowSplashFade 1ms linear 350ms forwards;
+      }
+
+      #initial-splash-glow {
+        animation: none;
+        box-shadow: 0 0 28px 6px rgba(232, 184, 61, 0.22);
+      }
+
+      #initial-splash-spinner {
+        animation: none;
+      }
+    }
+
+    @keyframes nowSplashFade {
+      from {
+        opacity: 0;
+      }
+
+      to {
+        opacity: 1;
+      }
+    }
+  </style>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Anek+Tamil:wght@400;500;600;700;800&family=Noto+Sans+Tamil:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet">
+</head>
+
+<body class="bg-[#FAF7EF] text-[#26332D] antialiased selection:bg-[#E8B83D]/30 selection:text-[#176B4D]">
+  <div id="root"><!--seo:body--></div>
+
+  <!-- First-frame splash -->
+  <div id="initial-splash" role="status" aria-live="polite" aria-busy="true">
+    <div id="initial-splash-inner">
+      <div id="initial-splash-logo-wrap">
+        <span id="initial-splash-glow" aria-hidden="true"></span>
+        <img id="initial-splash-logo" src="/logo-official.png" alt="Namma Ooru Workers" width="300" height="299"
+          fetchpriority="high" decoding="sync" draggable="false" />
+      </div>
+
+      <p id="initial-splash-title">
+        Namma Ooru <span>Workers</span>
+      </p>
+
+      <p id="initial-splash-subtitle">Trusted Local Workers in Tamil Nadu</p>
+      <div id="initial-splash-status">
+        <span id="initial-splash-spinner" aria-hidden="true"></span>
+        <p id="initial-splash-text">Loading...</p>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+
+</html>

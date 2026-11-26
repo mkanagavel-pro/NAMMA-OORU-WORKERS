@@ -250,6 +250,11 @@ function MainApp() {
       }
     }
   }, [bootDone, authLoading, activeTab, workersInit]);
+  // Remove the initial HTML splash only after the React app is ready.
+  useEffect(() => {
+    if (!bootDone) return;
+    document.getElementById('initial-splash')?.remove();
+  }, [bootDone]);
 
   // Stuck guard: never leave the user on the splash indefinitely.
   useEffect(() => {
@@ -276,8 +281,8 @@ function MainApp() {
     selectedDistrict !== 'all'
       ? searchDistricts.find((d) => d.id === selectedDistrict)
       : searchDistricts.length === 1
-      ? searchDistricts[0]
-      : undefined;
+        ? searchDistricts[0]
+        : undefined;
   const talukOptions = activeSearchDistrict?.taluks ?? [];
   // Areas: those of the chosen taluk, otherwise the district-wide list.
   const areaOptions: string[] =
@@ -472,317 +477,312 @@ function MainApp() {
 
   return (
     <>
-    {(!bootDone || splashLeaving) && (
-      <SplashScreen
-        status={workersInit === 'error' || bootTimedOut ? 'error' : 'loading'}
-        leaving={bootDone && splashLeaving}
-        onRetry={retryBoot}
-      />
-    )}
-    <div ref={appRootRef} className="min-h-screen flex flex-col bg-[#FAF7EF] text-[#26332D] pb-16 md:pb-0">
-      {/* Top Navbar */}
-      <Navbar
-        selectedDistrict={selectedDistrict}
-        onSelectDistrict={handleSelectDistrict}
-        enabledDistrictIds={searchDistricts.length > 0 ? searchDistricts.map((d) => d.id) : undefined}
-        onUseGps={handleUseGps}
-        gpsActive={gpsActive}
-        onOpenAuth={(role = 'customer', tab) => {
-          setAuthModalRole(role);
-          setAuthModalTab(tab);
-          setIsAuthModalOpen(true);
-        }}
-        onNavigateTab={(tab) => setActiveTab(tab)}
-        activeTab={activeTab}
-      />
-
-      {/* VIEW: WORKER DASHBOARD */}
-      {activeTab === 'worker-dash' && <Suspense fallback={<LazyFallback />}><WorkerDashboard /></Suspense>}
-
-      {/* VIEW: ADMIN PANEL */}
-      {activeTab === 'admin-panel' &&
-        (authLoading ? (
-          <div className="py-24 text-center" data-testid="admin-checking">
-            <div className="w-10 h-10 border-4 border-[#176B4D] border-t-transparent rounded-full animate-spin mx-auto" />
-          </div>
-        ) : user?.role === 'admin' ? (
-          <Suspense fallback={<LazyFallback />}><AdminPanel /></Suspense>
-        ) : null)}
-
-      {/* VIEW: FAVOURITES */}
-      {activeTab === 'favourites' && (
-        <FavouritesView
-          onViewProfile={(w) => {
-            setSelectedWorker(w);
-            setIsProfileModalOpen(true);
-          }}
-          onRateClick={(w) => {
-            setSelectedWorker(w);
-            setIsRatingModalOpen(true);
-          }}
-          onCall={handleCallWorker}
-          onWhatsApp={handleWhatsAppWorker}
-          onBackHome={() => setActiveTab('home')}
+      {(!bootDone || splashLeaving) && (
+        <SplashScreen
+          status={workersInit === 'error' || bootTimedOut ? 'error' : 'loading'}
+          leaving={bootDone && splashLeaving}
+          onRetry={retryBoot}
         />
       )}
+      <div ref={appRootRef} className="min-h-screen flex flex-col bg-[#FAF7EF] text-[#26332D] pb-16 md:pb-0">
+        {/* Top Navbar */}
+        <Navbar
+          selectedDistrict={selectedDistrict}
+          onSelectDistrict={handleSelectDistrict}
+          enabledDistrictIds={searchDistricts.length > 0 ? searchDistricts.map((d) => d.id) : undefined}
+          onUseGps={handleUseGps}
+          gpsActive={gpsActive}
+          onOpenAuth={(role = 'customer', tab) => {
+            setAuthModalRole(role);
+            setAuthModalTab(tab);
+            setIsAuthModalOpen(true);
+          }}
+          onNavigateTab={(tab) => setActiveTab(tab)}
+          activeTab={activeTab}
+        />
 
-      {/* VIEW: CONTACTED WORKERS */}
-      {activeTab === 'contacted' && (
-        <ContactedView
-          onViewWorker={async (workerId) => {
-            const res = await fetch(`/api/workers/${workerId}`);
-            if (res.ok) {
-              const data = await res.json();
-              setSelectedWorker(data);
+        {/* VIEW: WORKER DASHBOARD */}
+        {activeTab === 'worker-dash' && <Suspense fallback={<LazyFallback />}><WorkerDashboard /></Suspense>}
+
+        {/* VIEW: ADMIN PANEL */}
+        {activeTab === 'admin-panel' &&
+          (authLoading ? (
+            <div className="py-24 text-center" data-testid="admin-checking">
+              <div className="w-10 h-10 border-4 border-[#176B4D] border-t-transparent rounded-full animate-spin mx-auto" />
+            </div>
+          ) : user?.role === 'admin' ? (
+            <Suspense fallback={<LazyFallback />}><AdminPanel /></Suspense>
+          ) : null)}
+
+        {/* VIEW: FAVOURITES */}
+        {activeTab === 'favourites' && (
+          <FavouritesView
+            onViewProfile={(w) => {
+              setSelectedWorker(w);
               setIsProfileModalOpen(true);
-            }
-          }}
-          onCall={handleCallWorker}
-          onWhatsApp={handleWhatsAppWorker}
-          onBackHome={() => setActiveTab('home')}
-        />
-      )}
+            }}
+            onRateClick={(w) => {
+              setSelectedWorker(w);
+              setIsRatingModalOpen(true);
+            }}
+            onCall={handleCallWorker}
+            onWhatsApp={handleWhatsAppWorker}
+            onBackHome={() => setActiveTab('home')}
+          />
+        )}
 
-      {/* VIEW: MAIN WORKER DISCOVERY (HOME) */}
-      {activeTab === 'home' && (
-        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
-          {/* Hero Section with Search Input */}
-          <section className="glass-card rounded-3xl p-5 sm:p-8 relative overflow-hidden">
-            <div className="max-w-3xl">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-[#E8B83D]/20 text-[#855D05] border border-[#E8B83D]/40 mb-3">
-                <Sparkles className="w-3.5 h-3.5 text-[#176B4D]" />
-                <span>{t('hero_badge')}</span>
-              </span>
+        {/* VIEW: CONTACTED WORKERS */}
+        {activeTab === 'contacted' && (
+          <ContactedView
+            onViewWorker={async (workerId) => {
+              const res = await fetch(`/api/workers/${workerId}`);
+              if (res.ok) {
+                const data = await res.json();
+                setSelectedWorker(data);
+                setIsProfileModalOpen(true);
+              }
+            }}
+            onCall={handleCallWorker}
+            onWhatsApp={handleWhatsAppWorker}
+            onBackHome={() => setActiveTab('home')}
+          />
+        )}
 
-              <h1 className="text-2xl sm:text-4xl font-black text-[#26332D] tracking-tight leading-tight">
-                {t('hero_title')}
-              </h1>
-              <p className="text-xs sm:text-sm text-[#586B63] mt-2 font-medium">
-                {t('hero_subtitle')}
-              </p>
+        {/* VIEW: MAIN WORKER DISCOVERY (HOME) */}
+        {activeTab === 'home' && (
+          <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
+            {/* Hero Section with Search Input */}
+            <section className="glass-card rounded-3xl p-5 sm:p-8 relative overflow-hidden">
+              <div className="max-w-3xl">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-[#E8B83D]/20 text-[#855D05] border border-[#E8B83D]/40 mb-3">
+                  <Sparkles className="w-3.5 h-3.5 text-[#176B4D]" />
+                  <span>{t('hero_badge')}</span>
+                </span>
 
-              {/* Text Search Bar */}
-              <div className="mt-5 relative flex items-center">
-                <Search className="w-5 h-5 text-[#176B4D] absolute left-4 pointer-events-none" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') submitSearch(); }}
-                  placeholder={t('search_placeholder')}
-                  className="w-full text-xs sm:text-sm pl-11 pr-36 sm:pr-44 py-3.5 rounded-2xl bg-white border border-[#176B4D]/25 shadow-xs focus:outline-none focus:ring-2 focus:ring-[#176B4D] text-[#26332D]"
-                />
-                {/* Clear (X) and Search sit in ONE flex row so they can never overlap,
+                <h1 className="text-2xl sm:text-4xl font-black text-[#26332D] tracking-tight leading-tight">
+                  {t('hero_title')}
+                </h1>
+                <p className="text-xs sm:text-sm text-[#586B63] mt-2 font-medium">
+                  {t('hero_subtitle')}
+                </p>
+
+                {/* Text Search Bar */}
+                <div className="mt-5 relative flex items-center">
+                  <Search className="w-5 h-5 text-[#176B4D] absolute left-4 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') submitSearch(); }}
+                    placeholder={t('search_placeholder')}
+                    className="w-full text-xs sm:text-sm pl-11 pr-36 sm:pr-44 py-3.5 rounded-2xl bg-white border border-[#176B4D]/25 shadow-xs focus:outline-none focus:ring-2 focus:ring-[#176B4D] text-[#26332D]"
+                  />
+                  {/* Clear (X) and Search sit in ONE flex row so they can never overlap,
                     whatever the translated label width is. */}
-                <div className="absolute right-2 flex items-center gap-1">
-                  {searchQuery && (
+                  <div className="absolute right-2 flex items-center gap-1">
+                    {searchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => { setSearchQuery(''); setDebouncedQuery(''); }}
+                        aria-label={t('search_clear')}
+                        className="w-8 h-8 flex items-center justify-center rounded-full text-stone-400 hover:text-stone-700 hover:bg-stone-100"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
                     <button
-                      type="button"
-                      onClick={() => { setSearchQuery(''); setDebouncedQuery(''); }}
-                      aria-label={t('search_clear')}
-                      className="w-8 h-8 flex items-center justify-center rounded-full text-stone-400 hover:text-stone-700 hover:bg-stone-100"
+                      onClick={submitSearch}
+                      className="px-3.5 py-2 rounded-xl bg-[#176B4D] hover:bg-[#2F8F68] text-white text-xs font-bold transition shadow-2xs whitespace-nowrap"
                     >
-                      <X className="w-4 h-4" />
+                      {t('action_search')}
                     </button>
-                  )}
-                  <button
-                    onClick={submitSearch}
-                    className="px-3.5 py-2 rounded-xl bg-[#176B4D] hover:bg-[#2F8F68] text-white text-xs font-bold transition shadow-2xs whitespace-nowrap"
-                  >
-                    {t('action_search')}
-                  </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          </section>
+            </section>
 
-          {/* Worker Categories: quick-access pill bar + searchable "More Categories" popup.
+            {/* Worker Categories: quick-access pill bar + searchable "More Categories" popup.
               The pills scroll horizontally on their own; the More button sits outside the
               scroll area so it is always visible, even on narrow phones. */}
-          <section className="flex items-start gap-2 -mx-4 px-4 sm:mx-0 sm:px-0">
-            <div className="flex-1 min-w-0 overflow-x-auto pb-2">
-              <div className="flex items-center gap-2 min-w-max">
+            <section className="flex items-start gap-2 -mx-4 px-4 sm:mx-0 sm:px-0">
+              <div className="flex-1 min-w-0 overflow-x-auto pb-2">
+                <div className="flex items-center gap-2 min-w-max">
+                  <button
+                    onClick={() => setSelectedCategory('all')}
+                    className={`px-3.5 py-2 rounded-2xl text-xs font-bold transition flex items-center gap-1.5 ${selectedCategory === 'all'
+                        ? 'bg-[#176B4D] text-[#FAF7EF] shadow-xs'
+                        : 'bg-white/80 hover:bg-white text-[#26332D] border border-[#176B4D]/15'
+                      }`}
+                  >
+                    <Briefcase className="w-3.5 h-3.5" />
+                    <span>{t('filter_all')}</span>
+                  </button>
+
+                  {getQuickCategories().map((cat) => {
+                    const isSelected = selectedCategory === cat.id;
+                    const label = language === 'ta' ? cat.nameTa : cat.nameEn;
+                    return (
+                      <button
+                        key={cat.id}
+                        onClick={() => setSelectedCategory(cat.id)}
+                        className={`px-3.5 py-2 rounded-2xl text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap ${isSelected
+                            ? 'bg-[#176B4D] text-[#FAF7EF] shadow-xs'
+                            : 'bg-white/80 hover:bg-white text-[#26332D] border border-[#176B4D]/15'
+                          }`}
+                      >
+                        <span>{label}</span>
+                      </button>
+                    );
+                  })}
+
+                  {/* A category picked from the popup stays visible as an active pill. */}
+                  {(() => {
+                    const extra = getMoreCategories().find((c) => c.id === selectedCategory);
+                    if (!extra) return null;
+                    return (
+                      <button
+                        key={extra.id}
+                        data-selected-extra-category
+                        onClick={() => setSelectedCategory(extra.id)}
+                        className="px-3.5 py-2 rounded-2xl text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap bg-[#176B4D] text-[#FAF7EF] shadow-xs"
+                      >
+                        <span>{language === 'ta' ? extra.nameTa : extra.nameEn}</span>
+                      </button>
+                    );
+                  })()}
+                </div>
+              </div>
+              <div className="shrink-0 pb-2">
+                <CategoryPicker selectedCategory={selectedCategory} onSelect={setSelectedCategory} />
+              </div>
+            </section>
+
+            {/* Filter & Sorting Controls Bar */}
+            <section className="glass-card rounded-2xl p-2.5 sm:p-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3 text-xs min-w-0">
+              {/* Phones: tidy 2-column grid. sm+: the original wrapping flex row. */}
+              <div className="grid grid-cols-2 gap-x-2 gap-y-2 min-w-0 sm:flex sm:flex-wrap sm:items-center sm:gap-3">
+                {/* Available Only Toggle */}
                 <button
-                  onClick={() => setSelectedCategory('all')}
-                  className={`px-3.5 py-2 rounded-2xl text-xs font-bold transition flex items-center gap-1.5 ${
-                    selectedCategory === 'all'
-                      ? 'bg-[#176B4D] text-[#FAF7EF] shadow-xs'
-                      : 'bg-white/80 hover:bg-white text-[#26332D] border border-[#176B4D]/15'
-                  }`}
+                  onClick={() => setAvailableOnly(!availableOnly)}
+                  className={`flex items-center justify-center gap-1.5 px-2 sm:px-3 min-h-[36px] sm:min-h-0 py-1.5 rounded-full font-bold transition border min-w-0 ${availableOnly
+                      ? 'bg-emerald-600 text-white border-emerald-600'
+                      : 'bg-white text-stone-700 border-stone-300 hover:bg-stone-50'
+                    }`}
                 >
-                  <Briefcase className="w-3.5 h-3.5" />
-                  <span>{t('filter_all')}</span>
+                  <span
+                    className={`w-2 h-2 rounded-full ${availableOnly ? 'bg-white' : 'bg-emerald-600'}`}
+                  />
+                  <span className="truncate">{t('filter_available_only')}</span>
                 </button>
 
-                {getQuickCategories().map((cat) => {
-                  const isSelected = selectedCategory === cat.id;
-                  const label = language === 'ta' ? cat.nameTa : cat.nameEn;
-                  return (
-                    <button
-                      key={cat.id}
-                      onClick={() => setSelectedCategory(cat.id)}
-                      className={`px-3.5 py-2 rounded-2xl text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap ${
-                        isSelected
-                          ? 'bg-[#176B4D] text-[#FAF7EF] shadow-xs'
-                          : 'bg-white/80 hover:bg-white text-[#26332D] border border-[#176B4D]/15'
-                      }`}
-                    >
-                      <span>{label}</span>
-                    </button>
-                  );
-                })}
+                {/* Verified Only Toggle */}
+                <button
+                  onClick={() => setVerifiedOnly(!verifiedOnly)}
+                  className={`flex items-center justify-center gap-1.5 px-2 sm:px-3 min-h-[36px] sm:min-h-0 py-1.5 rounded-full font-bold transition border min-w-0 ${verifiedOnly
+                      ? 'bg-[#176B4D] text-white border-[#176B4D]'
+                      : 'bg-white text-stone-700 border-stone-300 hover:bg-stone-50'
+                    }`}
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5 text-[#E8B83D] shrink-0" />
+                  <span className="truncate">{t('filter_verified_only')}</span>
+                </button>
 
-                {/* A category picked from the popup stays visible as an active pill. */}
-                {(() => {
-                  const extra = getMoreCategories().find((c) => c.id === selectedCategory);
-                  if (!extra) return null;
-                  return (
-                    <button
-                      key={extra.id}
-                      data-selected-extra-category
-                      onClick={() => setSelectedCategory(extra.id)}
-                      className="px-3.5 py-2 rounded-2xl text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap bg-[#176B4D] text-[#FAF7EF] shadow-xs"
-                    >
-                      <span>{language === 'ta' ? extra.nameTa : extra.nameEn}</span>
-                    </button>
-                  );
-                })()}
-              </div>
-            </div>
-            <div className="shrink-0 pb-2">
-              <CategoryPicker selectedCategory={selectedCategory} onSelect={setSelectedCategory} />
-            </div>
-          </section>
-
-          {/* Filter & Sorting Controls Bar */}
-          <section className="glass-card rounded-2xl p-2.5 sm:p-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3 text-xs min-w-0">
-            {/* Phones: tidy 2-column grid. sm+: the original wrapping flex row. */}
-            <div className="grid grid-cols-2 gap-x-2 gap-y-2 min-w-0 sm:flex sm:flex-wrap sm:items-center sm:gap-3">
-              {/* Available Only Toggle */}
-              <button
-                onClick={() => setAvailableOnly(!availableOnly)}
-                className={`flex items-center justify-center gap-1.5 px-2 sm:px-3 min-h-[36px] sm:min-h-0 py-1.5 rounded-full font-bold transition border min-w-0 ${
-                  availableOnly
-                    ? 'bg-emerald-600 text-white border-emerald-600'
-                    : 'bg-white text-stone-700 border-stone-300 hover:bg-stone-50'
-                }`}
-              >
-                <span
-                  className={`w-2 h-2 rounded-full ${availableOnly ? 'bg-white' : 'bg-emerald-600'}`}
-                />
-                <span className="truncate">{t('filter_available_only')}</span>
-              </button>
-
-              {/* Verified Only Toggle */}
-              <button
-                onClick={() => setVerifiedOnly(!verifiedOnly)}
-                className={`flex items-center justify-center gap-1.5 px-2 sm:px-3 min-h-[36px] sm:min-h-0 py-1.5 rounded-full font-bold transition border min-w-0 ${
-                  verifiedOnly
-                    ? 'bg-[#176B4D] text-white border-[#176B4D]'
-                    : 'bg-white text-stone-700 border-stone-300 hover:bg-stone-50'
-                }`}
-              >
-                <CheckCircle2 className="w-3.5 h-3.5 text-[#E8B83D] shrink-0" />
-                <span className="truncate">{t('filter_verified_only')}</span>
-              </button>
-
-              {/* Phones only: the header location chip is removed on phones, so the
+                {/* Phones only: the header location chip is removed on phones, so the
                   same district selection and "use my location" live here. Both
                   call the exact handlers the navbar chip uses. */}
-              <div className="sm:hidden flex flex-col gap-1 text-[#586B63] min-w-0">
-                <span className="truncate">{t('select_district')}</span>
-                <select
-                  data-testid="mobile-district-select"
-                  value={selectedDistrict}
-                  onChange={(e) => handleSelectDistrict(e.target.value)}
-                  className="w-full min-w-0 min-h-[36px] bg-white rounded-lg border border-stone-300 px-2 py-1 text-xs font-semibold text-[#26332D] truncate"
-                >
-                  <option value="all">{t('all_districts')}</option>
-                  {TN_DISTRICTS.filter(
-                    (d) => searchDistricts.length === 0 || searchDistricts.some((sd) => sd.id === d.id)
-                  ).map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {language === 'ta' ? d.nameTa : d.nameEn}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="sm:hidden flex flex-col justify-end min-w-0">
-                <button
-                  type="button"
-                  data-testid="mobile-gps-button"
-                  onClick={handleUseGps}
-                  className={`w-full min-h-[36px] flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg border font-bold transition min-w-0 ${
-                    gpsActive
-                      ? 'bg-[#176B4D]/10 text-[#176B4D] border-[#176B4D]/40'
-                      : 'bg-white text-stone-700 border-stone-300'
-                  }`}
-                >
-                  <Crosshair className="w-3.5 h-3.5 text-[#176B4D] shrink-0" />
-                  <span className="truncate">{t('use_gps')}</span>
-                </button>
-              </div>
-
-              {/* Taluk selector (official taluks of the enabled district) */}
-              {talukOptions.length > 0 && (
-                <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-1.5 text-[#586B63] min-w-0">
-                  <span className="shrink-0">{t('filter_taluk')}:</span>
+                <div className="sm:hidden flex flex-col gap-1 text-[#586B63] min-w-0">
+                  <span className="truncate">{t('select_district')}</span>
                   <select
-                    value={selectedTaluk}
-                    onChange={(e) => {
-                      setSelectedTaluk(e.target.value);
-                      setSelectedArea('all'); // areas belong to a taluk
-                    }}
-                    className="bg-white rounded-lg border border-stone-300 w-full sm:w-auto min-h-[36px] sm:min-h-0 px-2 py-1 text-xs font-semibold text-[#26332D] sm:max-w-[200px] truncate min-w-0"
+                    data-testid="mobile-district-select"
+                    value={selectedDistrict}
+                    onChange={(e) => handleSelectDistrict(e.target.value)}
+                    className="w-full min-w-0 min-h-[36px] bg-white rounded-lg border border-stone-300 px-2 py-1 text-xs font-semibold text-[#26332D] truncate"
                   >
-                    <option value="all">{t('filter_all_taluks')}</option>
-                    {talukOptions.map((tk) => (
-                      <option key={tk.id} value={tk.id}>
-                        {loc.taluk(tk.id)}
+                    <option value="all">{t('all_districts')}</option>
+                    {TN_DISTRICTS.filter(
+                      (d) => searchDistricts.length === 0 || searchDistricts.some((sd) => sd.id === d.id)
+                    ).map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {language === 'ta' ? d.nameTa : d.nameEn}
                       </option>
                     ))}
                   </select>
                 </div>
-              )}
-
-              {/* Area selector (real configured/used areas of the enabled district) */}
-              {areaOptions.length > 0 && (
-                <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-1.5 text-[#586B63] min-w-0">
-                  <span className="shrink-0">{t('filter_area')}:</span>
-                  <select
-                    value={selectedArea}
-                    onChange={(e) => setSelectedArea(e.target.value)}
-                    className="bg-white rounded-lg border border-stone-300 w-full sm:w-auto min-h-[36px] sm:min-h-0 px-2 py-1 text-xs font-semibold text-[#26332D] sm:max-w-[200px] truncate min-w-0"
+                <div className="sm:hidden flex flex-col justify-end min-w-0">
+                  <button
+                    type="button"
+                    data-testid="mobile-gps-button"
+                    onClick={handleUseGps}
+                    className={`w-full min-h-[36px] flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg border font-bold transition min-w-0 ${gpsActive
+                        ? 'bg-[#176B4D]/10 text-[#176B4D] border-[#176B4D]/40'
+                        : 'bg-white text-stone-700 border-stone-300'
+                      }`}
                   >
-                    <option value="all">{t('filter_all_areas')}</option>
-                    {areaOptions.map((a) => (
-                      <option key={a} value={a}>
-                        {loc.place(a)}
-                      </option>
-                    ))}
-                  </select>
+                    <Crosshair className="w-3.5 h-3.5 text-[#176B4D] shrink-0" />
+                    <span className="truncate">{t('use_gps')}</span>
+                  </button>
                 </div>
-              )}
 
-              {/* Radius selector - only meaningful (and only shown) once real GPS coordinates exist */}
-              {customerCoords && (
-                <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-1.5 text-[#586B63] min-w-0">
-                  <span className="shrink-0">{t('filter_radius')}:</span>
-                  <select
-                    value={radiusKm}
-                    onChange={(e) => setRadiusKm(e.target.value)}
-                    className="bg-white rounded-lg border border-stone-300 w-full sm:w-auto min-h-[36px] sm:min-h-0 px-2 py-1 text-xs font-semibold text-[#26332D] sm:max-w-[200px] truncate min-w-0"
-                  >
-                    <option value="any">{t('filter_any_distance')}</option>
-                    <option value="5">{t('km_unit', { n: 5 })}</option>
-                    <option value="10">{t('km_unit', { n: 10 })}</option>
-                    <option value="25">{t('km_unit', { n: 25 })}</option>
-                    <option value="50">{t('km_unit', { n: 50 })}</option>
-                  </select>
-                </div>
-              )}
+                {/* Taluk selector (official taluks of the enabled district) */}
+                {talukOptions.length > 0 && (
+                  <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-1.5 text-[#586B63] min-w-0">
+                    <span className="shrink-0">{t('filter_taluk')}:</span>
+                    <select
+                      value={selectedTaluk}
+                      onChange={(e) => {
+                        setSelectedTaluk(e.target.value);
+                        setSelectedArea('all'); // areas belong to a taluk
+                      }}
+                      className="bg-white rounded-lg border border-stone-300 w-full sm:w-auto min-h-[36px] sm:min-h-0 px-2 py-1 text-xs font-semibold text-[#26332D] sm:max-w-[200px] truncate min-w-0"
+                    >
+                      <option value="all">{t('filter_all_taluks')}</option>
+                      {talukOptions.map((tk) => (
+                        <option key={tk.id} value={tk.id}>
+                          {loc.taluk(tk.id)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
-              {/* Sort selector - ROOT CAUSE FIX: this <select> previously had
+                {/* Area selector (real configured/used areas of the enabled district) */}
+                {areaOptions.length > 0 && (
+                  <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-1.5 text-[#586B63] min-w-0">
+                    <span className="shrink-0">{t('filter_area')}:</span>
+                    <select
+                      value={selectedArea}
+                      onChange={(e) => setSelectedArea(e.target.value)}
+                      className="bg-white rounded-lg border border-stone-300 w-full sm:w-auto min-h-[36px] sm:min-h-0 px-2 py-1 text-xs font-semibold text-[#26332D] sm:max-w-[200px] truncate min-w-0"
+                    >
+                      <option value="all">{t('filter_all_areas')}</option>
+                      {areaOptions.map((a) => (
+                        <option key={a} value={a}>
+                          {loc.place(a)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* Radius selector - only meaningful (and only shown) once real GPS coordinates exist */}
+                {customerCoords && (
+                  <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-1.5 text-[#586B63] min-w-0">
+                    <span className="shrink-0">{t('filter_radius')}:</span>
+                    <select
+                      value={radiusKm}
+                      onChange={(e) => setRadiusKm(e.target.value)}
+                      className="bg-white rounded-lg border border-stone-300 w-full sm:w-auto min-h-[36px] sm:min-h-0 px-2 py-1 text-xs font-semibold text-[#26332D] sm:max-w-[200px] truncate min-w-0"
+                    >
+                      <option value="any">{t('filter_any_distance')}</option>
+                      <option value="5">{t('km_unit', { n: 5 })}</option>
+                      <option value="10">{t('km_unit', { n: 10 })}</option>
+                      <option value="25">{t('km_unit', { n: 25 })}</option>
+                      <option value="50">{t('km_unit', { n: 50 })}</option>
+                    </select>
+                  </div>
+                )}
+
+                {/* Sort selector - ROOT CAUSE FIX: this <select> previously had
                   no width constraint at all. A native <select>'s rendered
                   width is driven by its selected option's text ("Default
                   (Verified & Ratings)" here), and unlike a text input,
@@ -795,180 +795,180 @@ function MainApp() {
                   closed-state label if it doesn't fit - the full option
                   list and functionality are unchanged, only the visible
                   label of a long-named option can truncate when closed. */}
-              <div className="col-span-2 sm:col-span-1 flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-1.5 text-[#586B63] min-w-0">
-                <span className="flex items-center gap-1 shrink-0">
-                  <SlidersHorizontal className="w-3.5 h-3.5 text-[#176B4D] shrink-0" />
-                  {t('filter_sort_by')}:
+                <div className="col-span-2 sm:col-span-1 flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-1.5 text-[#586B63] min-w-0">
+                  <span className="flex items-center gap-1 shrink-0">
+                    <SlidersHorizontal className="w-3.5 h-3.5 text-[#176B4D] shrink-0" />
+                    {t('filter_sort_by')}:
+                  </span>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as any)}
+                    className="bg-white rounded-lg border border-stone-300 w-full sm:w-auto min-h-[36px] sm:min-h-0 px-2 py-1 text-xs font-semibold text-[#26332D] sm:max-w-[220px] truncate min-w-0"
+                  >
+                    <option value="default">{t('sort_default')}</option>
+                    <option value="proximity">{t('filter_sort_proximity')}</option>
+                    <option value="rating">{t('filter_sort_rating')}</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Results Counter & Clear */}
+              <div className="flex items-center justify-between gap-3 min-w-0 sm:justify-start sm:flex-wrap border-t border-[#176B4D]/10 pt-2 sm:border-0 sm:pt-0">
+                <span className="text-xs font-bold text-[#176B4D] truncate min-w-0">
+                  {t(totalCount === 1 ? 'results_found_one' : 'results_found_many', { n: totalCount })}
                 </span>
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as any)}
-                  className="bg-white rounded-lg border border-stone-300 w-full sm:w-auto min-h-[36px] sm:min-h-0 px-2 py-1 text-xs font-semibold text-[#26332D] sm:max-w-[220px] truncate min-w-0"
-                >
-                  <option value="default">{t('sort_default')}</option>
-                  <option value="proximity">{t('filter_sort_proximity')}</option>
-                  <option value="rating">{t('filter_sort_rating')}</option>
-                </select>
+
+                {(selectedCategory !== 'all' ||
+                  selectedDistrict !== 'all' ||
+                  selectedTaluk !== 'all' ||
+                  selectedArea !== 'all' ||
+                  radiusKm !== 'any' ||
+                  availableOnly ||
+                  verifiedOnly ||
+                  searchQuery ||
+                  sortBy !== 'default') && (
+                    <button
+                      onClick={clearAllFilters}
+                      className="text-[11px] text-[#D64545] font-bold hover:underline shrink-0 min-h-[32px] sm:min-h-0 px-1"
+                    >
+                      {t('clear_filters')}
+                    </button>
+                  )}
               </div>
-            </div>
+            </section>
 
-            {/* Results Counter & Clear */}
-            <div className="flex items-center justify-between gap-3 min-w-0 sm:justify-start sm:flex-wrap border-t border-[#176B4D]/10 pt-2 sm:border-0 sm:pt-0">
-              <span className="text-xs font-bold text-[#176B4D] truncate min-w-0">
-                {t(totalCount === 1 ? 'results_found_one' : 'results_found_many', { n: totalCount })}
-              </span>
-
-              {(selectedCategory !== 'all' ||
-                selectedDistrict !== 'all' ||
-                selectedTaluk !== 'all' ||
-                selectedArea !== 'all' ||
-                radiusKm !== 'any' ||
-                availableOnly ||
-                verifiedOnly ||
-                searchQuery ||
-                sortBy !== 'default') && (
-                <button
-                  onClick={clearAllFilters}
-                  className="text-[11px] text-[#D64545] font-bold hover:underline shrink-0 min-h-[32px] sm:min-h-0 px-1"
-                >
-                  {t('clear_filters')}
-                </button>
+            {/* Workers Grid */}
+            <section>
+              {isLoadingWorkers ? (
+                <div className="py-20 text-center">
+                  <div className="w-10 h-10 border-4 border-[#176B4D] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+                  <p className="text-xs text-[#586B63]">{t('loading_workers')}</p>
+                </div>
+              ) : workers.length === 0 ? (
+                <div className="text-center py-16 bg-white/70 rounded-3xl border border-[#176B4D]/15 p-8 max-w-lg mx-auto">
+                  <Briefcase className="w-12 h-12 text-stone-300 mx-auto mb-3" />
+                  <h3 className="text-lg font-bold text-[#26332D]">{t('empty_workers_title')}</h3>
+                  <p className="text-xs text-[#586B63] mt-1 mb-5">
+                    {t('empty_workers_subtitle')}
+                  </p>
+                  <button
+                    onClick={clearAllFilters}
+                    className="px-5 py-2.5 rounded-2xl bg-[#176B4D] hover:bg-[#2F8F68] text-white font-bold text-xs shadow-md transition"
+                  >
+                    {t('empty_workers_reset')}
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-6">
+                  {workers.map((worker) => (
+                    <WorkerCard
+                      key={worker.id}
+                      worker={worker}
+                      onViewProfile={(w) => {
+                        setSelectedWorker(w);
+                        setIsProfileModalOpen(true);
+                      }}
+                      onRateClick={(w) => {
+                        setSelectedWorker(w);
+                        setIsRatingModalOpen(true);
+                      }}
+                      onCall={handleCallWorker}
+                      onWhatsApp={handleWhatsAppWorker}
+                    />
+                  ))}
+                </div>
               )}
+
+              {!isLoadingWorkers && hasMore && (
+                <div className="flex justify-center pt-6">
+                  <button
+                    onClick={() => fetchWorkers(page + 1)}
+                    disabled={isLoadingMore}
+                    className="px-5 py-2.5 rounded-2xl bg-white hover:bg-stone-50 text-[#176B4D] border border-[#176B4D]/25 font-bold text-xs shadow-sm transition disabled:opacity-60"
+                  >
+                    {t('load_more_workers')}
+                  </button>
+                </div>
+              )}
+            </section>
+          </main>
+        )}
+
+        {/* Footer */}
+        <footer className="mt-auto border-t border-[#176B4D]/15 bg-[#FAF7EF] py-6 px-4 text-center text-xs text-[#586B63]">
+          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="font-semibold text-[#176B4D]">
+              © {new Date().getFullYear()} Namma Ooru Workers (நம் ஊரு ஒர்க்கர்ஸ்). {t('footer_rights')}
             </div>
-          </section>
-
-          {/* Workers Grid */}
-          <section>
-            {isLoadingWorkers ? (
-              <div className="py-20 text-center">
-                <div className="w-10 h-10 border-4 border-[#176B4D] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-                <p className="text-xs text-[#586B63]">{t('loading_workers')}</p>
-              </div>
-            ) : workers.length === 0 ? (
-              <div className="text-center py-16 bg-white/70 rounded-3xl border border-[#176B4D]/15 p-8 max-w-lg mx-auto">
-                <Briefcase className="w-12 h-12 text-stone-300 mx-auto mb-3" />
-                <h3 className="text-lg font-bold text-[#26332D]">{t('empty_workers_title')}</h3>
-                <p className="text-xs text-[#586B63] mt-1 mb-5">
-                  {t('empty_workers_subtitle')}
-                </p>
-                <button
-                  onClick={clearAllFilters}
-                  className="px-5 py-2.5 rounded-2xl bg-[#176B4D] hover:bg-[#2F8F68] text-white font-bold text-xs shadow-md transition"
-                >
-                  {t('empty_workers_reset')}
-                </button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-6">
-                {workers.map((worker) => (
-                  <WorkerCard
-                    key={worker.id}
-                    worker={worker}
-                    onViewProfile={(w) => {
-                      setSelectedWorker(w);
-                      setIsProfileModalOpen(true);
-                    }}
-                    onRateClick={(w) => {
-                      setSelectedWorker(w);
-                      setIsRatingModalOpen(true);
-                    }}
-                    onCall={handleCallWorker}
-                    onWhatsApp={handleWhatsAppWorker}
-                  />
-                ))}
-              </div>
-            )}
-
-            {!isLoadingWorkers && hasMore && (
-              <div className="flex justify-center pt-6">
-                <button
-                  onClick={() => fetchWorkers(page + 1)}
-                  disabled={isLoadingMore}
-                  className="px-5 py-2.5 rounded-2xl bg-white hover:bg-stone-50 text-[#176B4D] border border-[#176B4D]/25 font-bold text-xs shadow-sm transition disabled:opacity-60"
-                >
-                  {t('load_more_workers')}
-                </button>
-              </div>
-            )}
-          </section>
-        </main>
-      )}
-
-      {/* Footer */}
-      <footer className="mt-auto border-t border-[#176B4D]/15 bg-[#FAF7EF] py-6 px-4 text-center text-xs text-[#586B63]">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="font-semibold text-[#176B4D]">
-            © {new Date().getFullYear()} Namma Ooru Workers (நம் ஊரு ஒர்க்கர்ஸ்). {t('footer_rights')}
+            <div className="flex items-center gap-4 text-[11px]">
+              <span>{t('footer_privacy')}</span>
+              <span>•</span>
+              <span>{t('footer_verification')}</span>
+              <span>•</span>
+              <span>{t('footer_bilingual')}</span>
+            </div>
           </div>
-          <div className="flex items-center gap-4 text-[11px]">
-            <span>{t('footer_privacy')}</span>
-            <span>•</span>
-            <span>{t('footer_verification')}</span>
-            <span>•</span>
-            <span>{t('footer_bilingual')}</span>
-          </div>
-        </div>
-      </footer>
+        </footer>
 
-      {/* Mobile Bottom Navigation */}
-      <MobileNav
-        activeTab={activeTab}
-        onNavigateTab={(tab) => setActiveTab(tab)}
-        onOpenAuth={() => {
-          setAuthModalTab('login');
-          setIsAuthModalOpen(true);
-        }}
-      />
+        {/* Mobile Bottom Navigation */}
+        <MobileNav
+          activeTab={activeTab}
+          onNavigateTab={(tab) => setActiveTab(tab)}
+          onOpenAuth={() => {
+            setAuthModalTab('login');
+            setIsAuthModalOpen(true);
+          }}
+        />
 
-      {/* Interactive Modals */}
-      <WorkerProfileModal
-        worker={selectedWorker}
-        isOpen={isProfileModalOpen}
-        onClose={() => setIsProfileModalOpen(false)}
-        onOpenRate={(w) => {
-          setSelectedWorker(w);
-          setIsRatingModalOpen(true);
-        }}
-        onOpenReport={(w) => {
-          setSelectedWorker(w);
-          setIsReportModalOpen(true);
-        }}
-        onCall={handleCallWorker}
-        onWhatsApp={handleWhatsAppWorker}
-      />
+        {/* Interactive Modals */}
+        <WorkerProfileModal
+          worker={selectedWorker}
+          isOpen={isProfileModalOpen}
+          onClose={() => setIsProfileModalOpen(false)}
+          onOpenRate={(w) => {
+            setSelectedWorker(w);
+            setIsRatingModalOpen(true);
+          }}
+          onOpenReport={(w) => {
+            setSelectedWorker(w);
+            setIsReportModalOpen(true);
+          }}
+          onCall={handleCallWorker}
+          onWhatsApp={handleWhatsAppWorker}
+        />
 
-      <RatingModal
-        worker={selectedWorker}
-        isOpen={isRatingModalOpen}
-        onClose={() => setIsRatingModalOpen(false)}
-        onRatingSuccess={handleRatingSuccess}
-        onRequireLogin={() => {
-          setAuthModalRole('customer');
-          setIsAuthModalOpen(true);
-        }}
-      />
+        <RatingModal
+          worker={selectedWorker}
+          isOpen={isRatingModalOpen}
+          onClose={() => setIsRatingModalOpen(false)}
+          onRatingSuccess={handleRatingSuccess}
+          onRequireLogin={() => {
+            setAuthModalRole('customer');
+            setIsAuthModalOpen(true);
+          }}
+        />
 
-      <ReportModal
-        worker={selectedWorker}
-        isOpen={isReportModalOpen}
-        onClose={() => setIsReportModalOpen(false)}
-      />
+        <ReportModal
+          worker={selectedWorker}
+          isOpen={isReportModalOpen}
+          onClose={() => setIsReportModalOpen(false)}
+        />
 
-      <AuthModal
-        isOpen={isAuthModalOpen}
-        onClose={() => {
-          setIsAuthModalOpen(false);
-          setGoogleSignup(null);
-          setGoogleError('');
-        }}
-        initialRole={authModalRole}
-        initialTab={authModalTab}
-        googleSignup={googleSignup}
-        initialError={googleError}
-      />
+        <AuthModal
+          isOpen={isAuthModalOpen}
+          onClose={() => {
+            setIsAuthModalOpen(false);
+            setGoogleSignup(null);
+            setGoogleError('');
+          }}
+          initialRole={authModalRole}
+          initialTab={authModalTab}
+          googleSignup={googleSignup}
+          initialError={googleError}
+        />
 
-      <NotificationDrawer />
-    </div>
+        <NotificationDrawer />
+      </div>
     </>
   );
 }
@@ -979,22 +979,27 @@ export default function App() {
   const cleanPath = window.location.pathname.replace(/\/+$/, '');
   const isResetPage = cleanPath === '/reset-password';
   const isAdminLoginPage = cleanPath === '/admin/login';
+  useEffect(() => {
+    if (isResetPage || isAdminLoginPage) {
+      document.getElementById('initial-splash')?.remove();
+    }
+  }, [isResetPage, isAdminLoginPage]);
   return (
     <LanguageProvider>
       <ToastProvider>
-      {isResetPage ? (
-        <Suspense fallback={<LazyFallback />}><ResetPasswordPage /></Suspense>
-      ) : isAdminLoginPage ? (
-        <AuthProvider>
-          <Suspense fallback={<LazyFallback />}><AdminLoginPage /></Suspense>
-        </AuthProvider>
-      ) : (
-        <AuthProvider>
-          <NotificationProvider>
-            <MainApp />
-          </NotificationProvider>
-        </AuthProvider>
-      )}
+        {isResetPage ? (
+          <Suspense fallback={<LazyFallback />}><ResetPasswordPage /></Suspense>
+        ) : isAdminLoginPage ? (
+          <AuthProvider>
+            <Suspense fallback={<LazyFallback />}><AdminLoginPage /></Suspense>
+          </AuthProvider>
+        ) : (
+          <AuthProvider>
+            <NotificationProvider>
+              <MainApp />
+            </NotificationProvider>
+          </AuthProvider>
+        )}
       </ToastProvider>
     </LanguageProvider>
   );
